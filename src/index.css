@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --color-brand-yellow: #FFD600;
+  --color-brand-black: #111111;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Brutalist Block Shadows */
+.brutalist-shadow-sm {
+  box-shadow: 2px 2px 0px 0px #111111;
+}
+
+.brutalist-shadow {
+  box-shadow: 4px 4px 0px 0px #111111;
+}
+
+.brutalist-shadow-lg {
+  box-shadow: 8px 8px 0px 0px #111111;
+}
+
+.brutalist-shadow-lg-yellow {
+  box-shadow: 8px 8px 0px 0px #FFD600;
+}
+
+.brutalist-shadow-xl {
+  box-shadow: 12px 12px 0px 0px #111111;
+}
+
+.brutalist-shadow-hover {
+  transition: all 0.2s ease;
+}
+.brutalist-shadow-hover:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: 8px 8px 0px 0px #111111;
+}
+
+/* Custom subtle glows and grid backgrounds */
+.bg-grid-pattern {
+  background-size: 30px 30px;
+  background-image: 
+    linear-gradient(to right, rgba(17, 17, 17, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(17, 17, 17, 0.08) 1px, transparent 1px);
+}
+
+.bg-grid-pattern-dark {
+  background-size: 30px 30px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 214, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 214, 0, 0.08) 1px, transparent 1px);
+}
+
+

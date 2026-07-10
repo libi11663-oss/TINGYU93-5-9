@@ -1,0 +1,35 @@
+{
+  "entities": {
+    "submission": {
+      "title": "Submission",
+      "description": "Form submission from a rider or advertiser",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "city": { "type": "string" },
+        "scooterModel": { "type": "string" },
+        "deliveryPlatform": { "type": "string" },
+        "companyName": { "type": "string" },
+        "budget": { "type": "string" },
+        "message": { "type": "string" },
+        "dailyHours": { "type": "string" },
+        "weeklyDays": { "type": "string" },
+        "primaryRegion": { "type": "string" },
+        "address": { "type": "string" },
+        "bankAccount": { "type": "string" },
+        "selectedDistricts": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["role", "name", "phone"]
+    }
+  },
+  "firestore": {
+    "/submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/submission" },
+      "description": "Form submissions from riders and advertisers"
+    }
+  }
+}

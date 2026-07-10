@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function incoming() { 
+      return request.resource.data; 
+    }
+
+    function isValidSubmission(data) {
+      return data.role is string && (data.role == "rider" || data.role == "advertiser")
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 30
+        && (!('email' in data) || (data.email is string && data.email.size() <= 150))
+        && (!('city' in data) || (data.city is string && data.city.size() <= 50))
+        && (!('scooterModel' in data) || (data.scooterModel is string && data.scooterModel.size() <= 100))
+        && (!('deliveryPlatform' in data) || (data.deliveryPlatform is string && data.deliveryPlatform.size() <= 100))
+        && (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 150))
+        && (!('budget' in data) || (data.budget is string && data.budget.size() <= 50))
+        && (!('message' in data) || (data.message is string && data.message.size() <= 1000))
+        && (!('dailyHours' in data) || (data.dailyHours is string && data.dailyHours.size() <= 20))
+        && (!('weeklyDays' in data) || (data.weeklyDays is string && data.weeklyDays.size() <= 20))
+        && (!('primaryRegion' in data) || (data.primaryRegion is string && data.primaryRegion.size() <= 100))
+        && (!('address' in data) || (data.address is string && data.address.size() <= 200))
+        && (!('bankAccount' in data) || (data.bankAccount is string && data.bankAccount.size() <= 100))
+        && (!('selectedDistricts' in data) || (data.selectedDistricts is list && data.selectedDistricts.size() <= 50))
+        && (!('createdAt' in data) || (data.createdAt is string));
+    }
+
+    match /submissions/{submissionId} {
+      allow create: if isValidId(submissionId) && isValidSubmission(incoming());
+      allow read, update, delete: if false; // PII Protection: Write-only for anonymous clients
+    }
+  }
+}

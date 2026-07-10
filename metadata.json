@@ -1,0 +1,6 @@
+{
+  "name": "穿巷外送廣告",
+  "description": "讓品牌穿梭在城市的大街小巷中。把機車擋泥板與外送箱，變成您的每月被動收入。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
