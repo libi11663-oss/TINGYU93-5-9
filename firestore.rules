@@ -20,6 +20,7 @@ service cloud.firestore {
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 30
         && (!('email' in data) || (data.email is string && data.email.size() <= 150))
+        && (!('lineId' in data) || (data.lineId is string && data.lineId.size() <= 100))
         && (!('city' in data) || (data.city is string && data.city.size() <= 50))
         && (!('scooterModel' in data) || (data.scooterModel is string && data.scooterModel.size() <= 100))
         && (!('deliveryPlatform' in data) || (data.deliveryPlatform is string && data.deliveryPlatform.size() <= 100))

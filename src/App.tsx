@@ -26,7 +26,8 @@ import {
   Clock,
   Calendar,
   AlertTriangle,
-  Users
+  Users,
+  MessageSquare
 } from 'lucide-react';
 
 // Types
@@ -61,6 +62,7 @@ export default function App() {
     name: '',
     phone: '',
     email: '',
+    lineId: '',
     city: '',
     scooterModel: '',
     deliveryPlatform: 'both',
@@ -430,7 +432,7 @@ export default function App() {
               我是外送騎士 ‧ 合作津貼方案
             </span>
             <h2 className="text-4xl sm:text-5xl font-black text-[#111111] uppercase tracking-tighter">
-              跑單同時賺外快，每月加薪超簡單！
+              跑單同時賺外快，每月被動加薪超簡單!
             </h2>
             <p className="text-slate-700 mt-4 text-base font-medium">
               我們不抽成，也不干涉您的接單。只需在原有的擋泥板安裝穿巷廣告，即可獲得穩定的每月現金津貼，為您的荷包大加分。
@@ -478,7 +480,7 @@ export default function App() {
                   </div>
                   <h4 className="font-black text-base text-[#111111]">100% 額外被動收入</h4>
                   <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                    與您的外送接單完全不衝突，只需維持平日跑單習慣，安裝即享雙月穩定收益。
+                    與您的外送接單不衝突，只需維持日常跑單習慣，安裝確實並達成每月目標，即享被動加薪津貼!
                   </p>
                 </div>
 
@@ -669,8 +671,11 @@ export default function App() {
                     01
                   </div>
                   <div>
-                    <h4 className="font-black text-[#111111] text-base">線上預約報名</h4>
-                    <p className="text-xs text-slate-600 font-medium mt-1">填寫下方申請表單，並上傳您的外送箱款式與常跑行政區。</p>
+                    <h4 className="font-black text-[#111111] text-base flex flex-wrap items-center gap-1.5">
+                      <span>線上預約報名</span>
+                      <span className="text-xs text-[#FF5A00] font-bold">(注意查收信箱是否獲取資格)</span>
+                    </h4>
+                    <p className="text-xs text-slate-600 font-medium mt-1">填寫下方申請表單，務必填寫您的常跑行政區、里程時數。</p>
                   </div>
                 </div>
 
@@ -904,6 +909,10 @@ export default function App() {
                       <span className="text-slate-500 font-bold">聯絡電話:</span>
                       <span className="font-black text-[#111111]">{formData.phone || '0912-345-678'}</span>
                     </div>
+                    <div className="flex justify-between border-b border-slate-100 pb-1.5">
+                      <span className="text-slate-500 font-bold">LINE ID:</span>
+                      <span className="font-black text-[#111111]">{formData.lineId || '未提供'}</span>
+                    </div>
                     {userRole === 'rider' ? (
                       <>
                         <div className="flex justify-between border-b border-slate-100 pb-1.5">
@@ -1021,20 +1030,38 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Common Field: Email */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-[#111111] flex items-center gap-1.5 uppercase">
-                      <Mail className="w-4 h-4 text-[#111111]" />
-                      <span>常用電子郵件 *</span>
-                    </label>
-                    <input 
-                      type="email" 
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
-                      placeholder="例：yourname@gmail.com"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Common Field: Email */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-[#111111] flex items-center gap-1.5 uppercase">
+                        <Mail className="w-4 h-4 text-[#111111]" />
+                        <span>常用電子郵件 *</span>
+                      </label>
+                      <input 
+                        type="email" 
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                        placeholder="例：yourname@gmail.com"
+                      />
+                    </div>
+
+                    {/* Common Field: LINE ID */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-[#111111] flex items-center gap-1.5 uppercase">
+                        <MessageSquare className="w-4 h-4 text-[#111111]" />
+                        <span>LINE ID * (方便快速聯繫)</span>
+                      </label>
+                      <input 
+                        type="text" 
+                        required
+                        value={formData.lineId}
+                        onChange={(e) => setFormData({...formData, lineId: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                        placeholder="例：line123456"
+                      />
+                    </div>
                   </div>
 
                   {/* Dynamic Fields for Rider Path */}
@@ -1398,6 +1425,7 @@ export default function App() {
                           name: '',
                           phone: '',
                           email: '',
+                          lineId: '',
                           city: '',
                           scooterModel: '',
                           deliveryPlatform: 'both',
@@ -1465,16 +1493,29 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-black text-[#111111] block uppercase">常用電子信箱 *</label>
-                      <input 
-                        type="email" 
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full px-3 py-2.5 border-2 border-[#111111] text-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold"
-                        placeholder="例：example@mail.com"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-black text-[#111111] block uppercase">常用電子信箱 *</label>
+                        <input 
+                          type="email" 
+                          required
+                          value={formData.email}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          className="w-full px-3 py-2.5 border-2 border-[#111111] text-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold"
+                          placeholder="例：example@mail.com"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-black text-[#111111] block uppercase">LINE ID *</label>
+                        <input 
+                          type="text" 
+                          required
+                          value={formData.lineId}
+                          onChange={(e) => setFormData({...formData, lineId: e.target.value})}
+                          className="w-full px-3 py-2.5 border-2 border-[#111111] text-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold"
+                          placeholder="例：line123456"
+                        />
+                      </div>
                     </div>
 
                     {userRole === 'rider' ? (
@@ -1551,6 +1592,44 @@ export default function App() {
                             </div>
                           </div>
                         )}
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-black text-[#111111] block uppercase">機車車型與排氣量 * (例：Gogoro 2 / 勁戰 125)</label>
+                          <input 
+                            type="text" 
+                            required
+                            value={formData.scooterModel}
+                            onChange={(e) => setFormData({...formData, scooterModel: e.target.value})}
+                            className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                            placeholder="例：SYM JET SL 158"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-black text-[#111111] block uppercase">平均每週跑單天數與每天時數 *</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input 
+                              type="number" 
+                              required
+                              min="1"
+                              max="7"
+                              value={formData.weeklyDays}
+                              onChange={(e) => setFormData({...formData, weeklyDays: e.target.value})}
+                              className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                              placeholder="天數 (1-7)"
+                            />
+                            <input 
+                              type="number" 
+                              required
+                              min="1"
+                              max="24"
+                              value={formData.dailyHours}
+                              onChange={(e) => setFormData({...formData, dailyHours: e.target.value})}
+                              className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                              placeholder="時數 (1-24)"
+                            />
+                          </div>
+                        </div>
 
                         {/* Shipping Address field */}
                         <div className="col-span-1 sm:col-span-2 space-y-1">

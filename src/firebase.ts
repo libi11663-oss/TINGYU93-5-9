@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore, collection, doc, setDoc } from 'firebase/firestore';
+import { initializeFirestore, collection, doc, setDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase
@@ -31,3 +31,15 @@ export async function saveSubmission(submissionData: any) {
   await setDoc(newDocRef, dataToSave);
   return newDocRef.id;
 }
+
+export async function getSubmissions() {
+  const submissionsRef = collection(db, 'submissions');
+  const q = query(submissionsRef, orderBy('createdAt', 'desc'));
+  const querySnapshot = await getDocs(q);
+  const docs: any[] = [];
+  querySnapshot.forEach((doc) => {
+    docs.push({ id: doc.id, ...doc.data() });
+  });
+  return docs;
+}
+
