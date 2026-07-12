@@ -2,7 +2,7 @@
   "entities": {
     "submission": {
       "title": "Submission",
-      "description": "Form submission from a rider or advertiser",
+      "description": "Form submission from a delivery rider",
       "type": "object",
       "properties": {
         "role": { "type": "string" },
@@ -12,16 +12,38 @@
         "lineId": { "type": "string" },
         "city": { "type": "string" },
         "scooterModel": { "type": "string" },
+        "scooter_model": { "type": "string" },
         "deliveryPlatform": { "type": "string" },
-        "companyName": { "type": "string" },
-        "budget": { "type": "string" },
-        "message": { "type": "string" },
+        "delivery_platform": { "type": "string" },
         "dailyHours": { "type": "string" },
+        "daily_hours": { "type": "string" },
         "weeklyDays": { "type": "string" },
+        "weekly_days": { "type": "string" },
         "primaryRegion": { "type": "string" },
         "address": { "type": "string" },
         "bankAccount": { "type": "string" },
+        "bank_account": { "type": "string" },
+        "licensePlate": { "type": "string" },
+        "license_plate": { "type": "string" },
         "selectedDistricts": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["role", "name", "phone"]
+    },
+    "advertiser_submission": {
+      "title": "Advertiser Submission",
+      "description": "Cooperation proposal form submission from an advertiser",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "lineId": { "type": "string" },
+        "city": { "type": "string" },
+        "companyName": { "type": "string" },
+        "budget": { "type": "string" },
+        "message": { "type": "string" },
         "createdAt": { "type": "string" }
       },
       "required": ["role", "name", "phone"]
@@ -30,7 +52,11 @@
   "firestore": {
     "/submissions/{submissionId}": {
       "schema": { "$ref": "#/entities/submission" },
-      "description": "Form submissions from riders and advertisers"
+      "description": "Form submissions from delivery riders"
+    },
+    "/advertiser_submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/advertiser_submission" },
+      "description": "Form submissions from brand advertisers"
     }
   }
 }

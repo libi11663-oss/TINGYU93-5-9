@@ -15,30 +15,52 @@ service cloud.firestore {
       return request.resource.data; 
     }
 
-    function isValidSubmission(data) {
-      return data.role is string && (data.role == "rider" || data.role == "advertiser")
+    function isValidRiderSubmission(data) {
+      return data.role is string && data.role == "rider"
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 30
         && (!('email' in data) || (data.email is string && data.email.size() <= 150))
         && (!('lineId' in data) || (data.lineId is string && data.lineId.size() <= 100))
         && (!('city' in data) || (data.city is string && data.city.size() <= 50))
         && (!('scooterModel' in data) || (data.scooterModel is string && data.scooterModel.size() <= 100))
+        && (!('scooter_model' in data) || (data.scooter_model is string && data.scooter_model.size() <= 100))
         && (!('deliveryPlatform' in data) || (data.deliveryPlatform is string && data.deliveryPlatform.size() <= 100))
-        && (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 150))
-        && (!('budget' in data) || (data.budget is string && data.budget.size() <= 50))
-        && (!('message' in data) || (data.message is string && data.message.size() <= 1000))
+        && (!('delivery_platform' in data) || (data.delivery_platform is string && data.delivery_platform.size() <= 100))
         && (!('dailyHours' in data) || (data.dailyHours is string && data.dailyHours.size() <= 20))
+        && (!('daily_hours' in data) || (data.daily_hours is string && data.daily_hours.size() <= 20))
         && (!('weeklyDays' in data) || (data.weeklyDays is string && data.weeklyDays.size() <= 20))
+        && (!('weekly_days' in data) || (data.weekly_days is string && data.weekly_days.size() <= 20))
         && (!('primaryRegion' in data) || (data.primaryRegion is string && data.primaryRegion.size() <= 100))
         && (!('address' in data) || (data.address is string && data.address.size() <= 200))
         && (!('bankAccount' in data) || (data.bankAccount is string && data.bankAccount.size() <= 100))
+        && (!('bank_account' in data) || (data.bank_account is string && data.bank_account.size() <= 100))
+        && (!('licensePlate' in data) || (data.licensePlate is string && data.licensePlate.size() <= 30))
+        && (!('license_plate' in data) || (data.license_plate is string && data.license_plate.size() <= 30))
         && (!('selectedDistricts' in data) || (data.selectedDistricts is list && data.selectedDistricts.size() <= 50))
         && (!('createdAt' in data) || (data.createdAt is string));
     }
 
+    function isValidAdvertiserSubmission(data) {
+      return data.role is string && data.role == "advertiser"
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 30
+        && (!('email' in data) || (data.email is string && data.email.size() <= 150))
+        && (!('lineId' in data) || (data.lineId is string && data.lineId.size() <= 100))
+        && (!('city' in data) || (data.city is string && data.city.size() <= 50))
+        && (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 150))
+        && (!('budget' in data) || (data.budget is string && data.budget.size() <= 50))
+        && (!('message' in data) || (data.message is string && data.message.size() <= 1000))
+        && (!('createdAt' in data) || (data.createdAt is string));
+    }
+
     match /submissions/{submissionId} {
-      allow create: if isValidId(submissionId) && isValidSubmission(incoming());
-      allow read, update, delete: if false; // PII Protection: Write-only for anonymous clients
+      allow create: if isValidId(submissionId) && isValidRiderSubmission(incoming());
+      allow read, update, delete: if false;
+    }
+
+    match /advertiser_submissions/{submissionId} {
+      allow create: if isValidId(submissionId) && isValidAdvertiserSubmission(incoming());
+      allow read, update, delete: if false;
     }
   }
 }

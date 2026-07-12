@@ -74,10 +74,13 @@ export default function App() {
     primaryRegion: '',
     address: '',
     bankAccount: '',
+    licensePlate: '',
     selectedDistricts: [] as string[]
   });
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [activeLegalTab, setActiveLegalTab] = useState<'privacy' | 'terms' | 'traffic'>('privacy');
   const [countdown, setCountdown] = useState<number>(8);
   const [isCountdownPaused, setIsCountdownPaused] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -122,9 +125,21 @@ export default function App() {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
+      // 處理台灣手機號碼格式 (移除破折號、空格、+886 國碼，並補 0)
+      const digitsOnly = formData.phone.replace(/\D/g, '');
+      let sanitizedPhone = digitsOnly;
+      if (sanitizedPhone.startsWith('8869') && sanitizedPhone.length === 12) {
+        sanitizedPhone = '0' + sanitizedPhone.slice(3);
+      }
+      
+      if (!sanitizedPhone.startsWith('09') || sanitizedPhone.length !== 10) {
+        throw new Error("請填寫正確的手機號碼格式（例：0912345678）");
+      }
+
       await saveSubmission({
         role: userRole,
-        ...formData
+        ...formData,
+        phone: sanitizedPhone
       });
       setFormSubmitted(true);
       setCountdown(8);
@@ -164,6 +179,7 @@ export default function App() {
               primaryRegion: '',
               address: '',
               bankAccount: '',
+              licensePlate: '',
               selectedDistricts: []
             });
             setFormSubmitted(false);
@@ -1021,7 +1037,6 @@ export default function App() {
                       <input 
                         type="tel" 
                         required
-                        pattern="^09[0-9]{8}$"
                         value={formData.phone}
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
@@ -1177,6 +1192,38 @@ export default function App() {
                           placeholder="例：中國信託 (822) 123456789012"
                         />
                       </div>
+
+                      {/* Scooter license plate */}
+                      <div className="col-span-1 sm:col-span-2 space-y-2">
+                        <label className="text-xs font-black text-[#111111] flex items-center gap-1.5 uppercase">
+                          <Bike className="w-4 h-4 text-[#111111]" />
+                          <span>機車車牌號碼 * <span className="text-slate-500 font-medium">(僅用於辨識、紀錄會員用)</span></span>
+                        </label>
+                        <input 
+                          type="text" 
+                          required
+                          value={formData.licensePlate}
+                          onChange={(e) => setFormData({...formData, licensePlate: e.target.value})}
+                          className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                          placeholder="例：ABC-1234"
+                        />
+                      </div>
+
+                      {/* Scooter model */}
+                      <div className="col-span-1 sm:col-span-2 space-y-2">
+                        <label className="text-xs font-black text-[#111111] flex items-center gap-1.5 uppercase">
+                          <Bike className="w-4 h-4 text-[#111111]" />
+                          <span>機車車型與排氣量 * <span className="text-slate-500 font-medium">(例：Gogoro 2 / 勁戰 125)</span></span>
+                        </label>
+                        <input 
+                          type="text" 
+                          required
+                          value={formData.scooterModel}
+                          onChange={(e) => setFormData({...formData, scooterModel: e.target.value})}
+                          className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                          placeholder="例：SYM JET SL 158"
+                        />
+                      </div>
                     </div>
                   ) : (
                     /* Dynamic Fields for Advertiser Path */
@@ -1292,25 +1339,25 @@ export default function App() {
               </div>
             </div>
 
-            {/* Quick Links Riders */}
-            <div className="space-y-4">
-              <h4 className="text-white text-sm font-black tracking-wider uppercase border-l-4 border-[#FFD600] pl-2.5">騎士專區</h4>
-              <ul className="text-xs space-y-2.5 font-bold">
-                <li><a href="#rider-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">被動收益計算機</a></li>
-                <li><a href="#form-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">線上申請加入</a></li>
-                <li><a href="#benefits-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">技師安裝規範</a></li>
-                <li><a href="#faq-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">常見問題</a></li>
-              </ul>
-            </div>
-
-            {/* Quick Links Advertisers */}
-            <div className="space-y-4">
-              <h4 className="text-white text-sm font-black tracking-wider uppercase border-l-4 border-[#FFD600] pl-2.5">品牌主合作</h4>
-              <ul className="text-xs space-y-2.5 font-bold">
-                <li><a href="#benefits-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">品牌宣傳規劃</a></li>
-                <li><a href="#benefits-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">數據追蹤優勢</a></li>
-                <li><a href="#form-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">聯絡顧問簡報</a></li>
-                <li><a href="#faq-section" className="text-slate-400 hover:text-[#FFD600] transition-colors">廣告尺寸規範</a></li>
+            {/* Quick Links / Cooperation Proposal */}
+            <div className="space-y-4 md:col-span-2">
+              <h4 className="text-white text-sm font-black tracking-wider uppercase border-l-4 border-[#FFD600] pl-2.5">合作提案</h4>
+              <ul className="text-xs space-y-3.5 font-bold">
+                <li>
+                  <button 
+                    onClick={() => openFormWithRole('advertiser')}
+                    className="text-slate-400 hover:text-[#FFD600] transition-colors flex items-center gap-2 cursor-pointer text-left group"
+                  >
+                    <span>合作提案 (連接到廣告主表單)</span>
+                    <span className="text-[10px] bg-[#FFD600] text-[#111111] px-1.5 py-0.5 font-black uppercase tracking-wider group-hover:bg-white transition-colors">聯絡顧問</span>
+                  </button>
+                </li>
+                <li className="text-slate-400 pt-1">
+                  <span>聯絡信箱：</span>
+                  <a href="mailto:libi11663@gmail.com" className="text-white hover:text-[#FFD600] underline transition-colors">
+                    libi11663@gmail.com
+                  </a>
+                </li>
               </ul>
             </div>
 
@@ -1318,13 +1365,32 @@ export default function App() {
 
           {/* Legal / Copyright Bottom */}
           <div className="border-t-2 border-[#333333] pt-8 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-4 font-bold">
-            <div>
+            <div className="text-center sm:text-left">
               &copy; {new Date().getFullYear()} 穿巷外送移動廣告股份有限公司 (ChuanXiang Ads Corp). All rights reserved.
             </div>
-            <div className="flex gap-4">
-              <a href="#" className="hover:text-slate-300">隱私權政策</a>
-              <a href="#" className="hover:text-slate-300">騎士服務條款</a>
-              <a href="#" className="hover:text-slate-300">交通法規合規聲明</a>
+            <div className="flex flex-wrap gap-4 items-center justify-center">
+              <span className="text-slate-400">
+                聯絡信箱: <a href="mailto:libi11663@gmail.com" className="text-[#FFD600] hover:underline">libi11663@gmail.com</a>
+              </span>
+              <span className="text-slate-600">|</span>
+              <button 
+                onClick={() => { setActiveLegalTab('privacy'); setIsLegalModalOpen(true); }}
+                className="hover:text-slate-300 cursor-pointer transition-colors"
+              >
+                隱私權政策
+              </button>
+              <button 
+                onClick={() => { setActiveLegalTab('terms'); setIsLegalModalOpen(true); }}
+                className="hover:text-slate-300 cursor-pointer transition-colors"
+              >
+                騎士服務條款
+              </button>
+              <button 
+                onClick={() => { setActiveLegalTab('traffic'); setIsLegalModalOpen(true); }}
+                className="hover:text-slate-300 cursor-pointer transition-colors"
+              >
+                交通法規合規聲明
+              </button>
             </div>
           </div>
 
@@ -1381,10 +1447,29 @@ export default function App() {
                       <CheckCircle2 className="w-8 h-8" />
                     </div>
                     <div>
-                      <h4 className="text-xl font-black text-[#111111]">感謝您的報名！</h4>
-                      <p className="text-sm text-slate-700 mt-2 font-bold">
-                        專員正加急處理您的需求。我們將在 24 小時內發送預約簡訊或聯絡電話。
+                      <h4 className="text-xl font-black text-[#111111]">
+                        {userRole === 'rider' ? '感謝您的加入報名！' : '合作提案已成功送出！'}
+                      </h4>
+                      <p className="text-sm text-slate-700 mt-2 font-bold max-w-md mx-auto">
+                        {userRole === 'rider' ? (
+                          '專員正加急處理您的需求。我們將在 24 小時內發送預約簡訊或聯絡電話。'
+                        ) : (
+                          <span>
+                            您的合作提案已安全儲存於獨立的<strong className="text-[#FF5A00] font-black">【廣告主專屬資料庫】</strong>，我們將指派商務顧問於 24 小時內與您聯繫。
+                          </span>
+                        )}
                       </p>
+                      {userRole === 'advertiser' && (
+                        <div className="mt-4 p-3 bg-slate-50 border border-slate-300 rounded-none max-w-sm mx-auto text-xs text-slate-600 font-bold">
+                          <span>急件或需直接對接？您也可以直接來信：</span>
+                          <a 
+                            href="mailto:libi11663@gmail.com?subject=穿巷廣告主合作提案&body=您好，我們對穿巷移動廣告有合作興趣..." 
+                            className="text-[#FF5A00] hover:underline block mt-1 font-black"
+                          >
+                            libi11663@gmail.com
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     {/* Auto-reset Countdown Controller */}
@@ -1437,6 +1522,7 @@ export default function App() {
                           primaryRegion: '',
                           address: '',
                           bankAccount: '',
+                          licensePlate: '',
                           selectedDistricts: []
                         });
                         setFormSubmitted(false);
@@ -1484,7 +1570,6 @@ export default function App() {
                         <input 
                           type="tel" 
                           required
-                          pattern="^09[0-9]{8}$"
                           value={formData.phone}
                           onChange={(e) => setFormData({...formData, phone: e.target.value})}
                           className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
@@ -1656,6 +1741,21 @@ export default function App() {
                             placeholder="例：中國信託 (822) 123456789012"
                           />
                         </div>
+
+                        {/* Scooter license plate */}
+                        <div className="col-span-1 sm:col-span-2 space-y-1">
+                          <label className="text-xs font-black text-[#111111] block uppercase">
+                            機車車牌號碼 * <span className="text-slate-500 font-medium normal-case">(僅用於辨識、紀錄會員用)</span>
+                          </label>
+                          <input 
+                            type="text" 
+                            required
+                            value={formData.licensePlate}
+                            onChange={(e) => setFormData({...formData, licensePlate: e.target.value})}
+                            className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                            placeholder="例：ABC-1234"
+                          />
+                        </div>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1734,6 +1834,273 @@ export default function App() {
                   </form>
                 )}
 
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* LEGAL DOCUMENTS MODAL (Privacy Policy, Rider Terms, Traffic Compliance) */}
+      <AnimatePresence>
+        {isLegalModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLegalModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Box */}
+            <motion.div 
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              className="bg-white rounded-none w-full max-w-3xl overflow-hidden relative z-10 border-4 border-[#111111] brutalist-shadow flex flex-col max-h-[85vh]"
+            >
+              {/* Header */}
+              <div className="bg-[#111111] text-white p-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-6 h-6 text-[#FFD600]" />
+                  <span className="font-black tracking-wide text-base uppercase">法律條款與權益說明</span>
+                </div>
+                <button 
+                  onClick={() => setIsLegalModalOpen(false)}
+                  className="p-1.5 border border-white/20 bg-white/10 text-white hover:bg-[#FFD600] hover:text-[#111111] hover:border-[#111111] rounded-none transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Tab Navigation */}
+              <div className="flex border-b-4 border-[#111111] bg-slate-50 font-bold overflow-x-auto shrink-0">
+                <button
+                  onClick={() => setActiveLegalTab('privacy')}
+                  className={`flex-1 py-3 px-4 text-xs sm:text-sm border-r-2 border-[#111111] transition-all whitespace-nowrap cursor-pointer ${
+                    activeLegalTab === 'privacy' 
+                      ? 'bg-[#FFD600] text-[#111111] font-black' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-[#111111]'
+                  }`}
+                >
+                  🛡️ 隱私權政策
+                </button>
+                <button
+                  onClick={() => setActiveLegalTab('terms')}
+                  className={`flex-1 py-3 px-4 text-xs sm:text-sm border-r-2 border-[#111111] transition-all whitespace-nowrap cursor-pointer ${
+                    activeLegalTab === 'terms' 
+                      ? 'bg-[#FFD600] text-[#111111] font-black' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-[#111111]'
+                  }`}
+                >
+                  🏍️ 騎士服務條款
+                </button>
+                <button
+                  onClick={() => setActiveLegalTab('traffic')}
+                  className={`flex-1 py-3 px-4 text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer ${
+                    activeLegalTab === 'traffic' 
+                      ? 'bg-[#FFD600] text-[#111111] font-black' 
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-[#111111]'
+                  }`}
+                >
+                  🛑 交通法規合規聲明
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-6 sm:p-8 overflow-y-auto text-[#111111] text-sm leading-relaxed space-y-6 flex-1 bg-[#FFFDF0]/30 font-medium">
+                {activeLegalTab === 'privacy' && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <h3 className="text-lg font-black text-[#111111] mb-2 border-b-2 border-dashed border-slate-300 pb-2">
+                        穿巷外送移動廣告 隱私權保護政策
+                      </h3>
+                      <p className="text-xs text-slate-500 font-bold">更新日期：2026 年 7 月 12 日</p>
+                    </div>
+
+                    <p>
+                      穿巷外送移動廣告股份有限公司（以下簡稱「本公司」）非常重視您的個人隱私與個人資料保護。本隱私權政策旨在說明我們如何蒐集、處理、利用及保護您所提供的個人資料。
+                    </p>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        一、 個人資料之蒐集目的與類別
+                      </h4>
+                      <div className="pl-4 space-y-2.5">
+                        <p>
+                          <strong className="text-slate-900">1. 騎士會員：</strong>
+                          本公司將蒐集您的姓名、電話號碼（台灣手機號碼）、電子郵件、LINE ID、外送平台、機車型號、機車車牌號碼、匯款帳號（銀行名稱、分行與帳號）及通訊地址等資訊。
+                          <br />
+                          <span className="text-xs text-slate-500 font-bold block mt-1">
+                            ＊註：機車車牌號碼僅用於辨識、紀錄與審查騎士會員身分；銀行帳戶僅用於撥付廣告活動獎勵金與依法申報核銷之用途。
+                          </span>
+                        </p>
+                        <p>
+                          <strong className="text-slate-900">2. 品牌合作商 / 廣告主：</strong>
+                          本公司將蒐集您的公司名稱、廣告預算、聯絡人姓名、電話、電子郵件及合作提案描述。
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        二、 個人資料利用之期間、地區及對象
+                      </h4>
+                      <ul className="list-decimal pl-6 space-y-1.5">
+                        <li><strong>期間：</strong>本公司營運期間、特定目的存續期間或依相關法令所定之保存期限。</li>
+                        <li><strong>地區：</strong>中華民國（台灣）境內及本公司提供服務之地區。</li>
+                        <li><strong>對象：</strong>本公司、關係企業及依法具有調查權之政府主管機關。</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        三、 個人資料的安全與防護
+                      </h4>
+                      <p>
+                        我們採用嚴格的資訊安全保護措施，包含資料庫傳輸加密技術、防火牆架構與內部授權管理，以保障您的個人資料免受未經授權之存取、竄改、洩漏或毀損。
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        四、 使用者之權利與行使
+                      </h4>
+                      <p>
+                        依據個人資料保護法第三條規定，您有權隨時向本公司申請查詢、閱覽、製給複製本、補充或更正、停止蒐集、處理、利用或要求刪除您的個人資料。若您欲行使上述權利，請與本公司服務信箱聯絡：
+                        <a href="mailto:libi11663@gmail.com" className="text-blue-600 underline hover:text-[#FF5A00] font-black ml-1">
+                          libi11663@gmail.com
+                        </a>。
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {activeLegalTab === 'terms' && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <h3 className="text-lg font-black text-[#111111] mb-2 border-b-2 border-dashed border-slate-300 pb-2">
+                        穿巷外送移動廣告 騎士服務條款
+                      </h3>
+                      <p className="text-xs text-slate-500 font-bold">更新日期：2026 年 7 月 12 日</p>
+                    </div>
+
+                    <p>
+                      歡迎您加入 ChuanXiang 穿巷騎士行列！為保障雙方權益，在您註冊成為騎士並參與廣告配送任務之前，請務必詳閱以下服務條款：
+                    </p>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        一、 騎士資格與資料真實性
+                      </h4>
+                      <ul className="list-disc pl-6 space-y-1.5">
+                        <li>申請人必須年滿 18 歲，且持有中華民國有效之重型或輕型機車駕駛執照。</li>
+                        <li>申請人保證填寫之個人資料、外送平台、機車型號與車牌號碼等皆屬真實無誤。如有虛偽不實，須自行承擔法律責任，本公司並有權拒絕發放廣告獎金。</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        二、 廣告載具（外送箱/泥除）安裝規範
+                      </h4>
+                      <ul className="list-disc pl-6 space-y-1.5">
+                        <li>騎士同意依本公司技師之安全指引安裝外送箱廣告板、擋泥板（泥除）廣告，不得隨意拆卸或遮蔽。</li>
+                        <li>騎士有義務妥善維護廣告物之清潔與完整性。如有蓄意損毀、惡意塗改或撕毀廣告內容之行為，本公司將有權向您追償相關損失。</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        三、 廣告費用撥付與核銷
+                      </h4>
+                      <ul className="list-disc pl-6 space-y-1.5">
+                        <li>廣告活動獎勵金將依照每次專案簽訂之里程數、活動天數、曝光比率等指標進行核算。</li>
+                        <li>騎士須提供本人之有效台灣銀行帳戶，本公司將依核對無誤之時程進行匯款撥付，並依法進行所得核銷申報。</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        四、 違約與處置
+                      </h4>
+                      <p>
+                        若騎士在合作期間涉嫌任何違法情事、危險駕駛、蓄意偽造曝光里程或外送數據，本公司有權立即終止合作關係、凍結並追回不當獲得之獎勵金。
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {activeLegalTab === 'traffic' && (
+                  <div className="space-y-5 animate-fadeIn">
+                    <div>
+                      <h3 className="text-lg font-black text-[#111111] mb-2 border-b-2 border-dashed border-slate-300 pb-2">
+                        交通法規合規與行車安全聲明
+                      </h3>
+                      <p className="text-xs text-slate-500 font-bold">更新日期：2026 年 7 月 12 日</p>
+                    </div>
+
+                    <p>
+                      穿巷外送移動廣告（ChuanXiang Ads）致力於打造兼顧行銷創意與高度行車安全的廣告載具，以下為我們對交通法規合規與安全駕駛的承諾與規範：
+                    </p>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        一、 機車裝載安全標準（道路交通安全規則第88條）
+                      </h4>
+                      <p>
+                        本公司設計之所有外送廣告箱體、擋泥板廣告板等配件，均嚴格遵守中華民國《道路交通安全規則》第八十八條中有關機車載重物之限制規範：
+                      </p>
+                      <ul className="list-disc pl-6 space-y-1.5">
+                        <li><strong>寬度：</strong>不得超過把手外緣十公分。</li>
+                        <li><strong>高度：</strong>自地面起不得超過二公尺。</li>
+                        <li><strong>長度：</strong>自後輪軸起算不得伸出半公尺。</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        二、 確保行車燈光與號牌之清晰
+                      </h4>
+                      <ul className="list-disc pl-6 space-y-1.5">
+                        <li>所有廣告板安裝絕不阻擋、折射或遮蔽機車之後煞車燈、左右方向燈、尾燈與反光標誌。</li>
+                        <li>安裝位置絕對不遮蓋、阻擋、損毀或變造機車車牌號碼，以符合道路交通安全合規標準。</li>
+                      </ul>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-black text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-4 bg-[#FF5A00] inline-block" />
+                        三、 防禦駕駛與個人責任
+                      </h4>
+                      <p>
+                        「安全第一」是我們最高原則。所有參與穿巷專案之騎士，於外送與廣告投放期間必須確實遵守交通規則，包括但不限於拒絕超速、切勿闖紅燈、拒絕逆向、拒絕酒駕、不低頭滑手機、遵循號誌。
+                        <br />
+                        騎士個人行車不當所導致之任何民刑事責任、罰單、或交通意外損失，均應由騎士本人依法承擔與負責。
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-100 p-4 border-t-2 border-[#111111] flex justify-end shrink-0">
+                <button
+                  onClick={() => setIsLegalModalOpen(false)}
+                  className="px-6 py-2.5 border-2 border-[#111111] bg-[#FFD600] text-[#111111] font-black text-xs sm:text-sm hover:bg-[#FFE34D] transition-all cursor-pointer rounded-none"
+                >
+                  確認並關閉
+                </button>
               </div>
             </motion.div>
           </div>
