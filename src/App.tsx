@@ -80,11 +80,15 @@ export default function App() {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [hasAgreedToTermsCheckbox, setHasAgreedToTermsCheckbox] = useState(false);
+  const [termsReadCountdown, setTermsReadCountdown] = useState<number>(0);
   const [activeLegalTab, setActiveLegalTab] = useState<'privacy' | 'terms' | 'traffic'>('privacy');
   const [countdown, setCountdown] = useState<number>(8);
   const [isCountdownPaused, setIsCountdownPaused] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // FAQ states
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -120,20 +124,74 @@ export default function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Terms and conditions reading timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isTermsModalOpen) {
+      setTermsReadCountdown(5);
+      timer = setInterval(() => {
+        setTermsReadCountdown((prev) => {
+          if (prev <= 1) {
+            if (timer) clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      setTermsReadCountdown(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isTermsModalOpen]);
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validate Phone
+    const digitsOnly = formData.phone.replace(/\D/g, '');
+    let sanitizedPhone = digitsOnly;
+    if (sanitizedPhone.startsWith('8869') && sanitizedPhone.length === 12) {
+      sanitizedPhone = '0' + sanitizedPhone.slice(3);
+    }
+    if (!sanitizedPhone.startsWith('09') || sanitizedPhone.length !== 10) {
+      newErrors.phone = "手機號碼格式錯誤：必須為 09 開頭且共 10 碼數字（例：0912345678）";
+    }
+
+    // Validate Email
+    const emailTrimmed = formData.email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailTrimmed)) {
+      newErrors.email = "電子信箱格式錯誤（例：yourname@example.com）";
+    }
+
+    // Validate Bank Account (only for Rider)
+    if (userRole === 'rider') {
+      const bankTrimmed = formData.bankAccount.trim();
+      const bankRegex = /^\d{3}[ -]\d+$/;
+      if (!bankRegex.test(bankTrimmed)) {
+        newErrors.bankAccount = "銀行帳號格式錯誤：前面需要輸入 3 位銀行代碼並加上「空格」或「-」，後面輸入帳號（例：822 123456789012 或 822-123456789012）";
+      }
+    }
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const executeSubmission = async () => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      // 處理台灣手機號碼格式 (移除破折號、空格、+886 國碼，並補 0)
+      // Validate again to be sure
+      if (!validateForm()) {
+        throw new Error("表單格式有誤，請檢查標記欄位。");
+      }
+
       const digitsOnly = formData.phone.replace(/\D/g, '');
       let sanitizedPhone = digitsOnly;
       if (sanitizedPhone.startsWith('8869') && sanitizedPhone.length === 12) {
         sanitizedPhone = '0' + sanitizedPhone.slice(3);
-      }
-      
-      if (!sanitizedPhone.startsWith('09') || sanitizedPhone.length !== 10) {
-        throw new Error("請填寫正確的手機號碼格式（例：0912345678）");
       }
 
       await saveSubmission({
@@ -150,6 +208,30 @@ export default function App() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setFormErrors({});
+    
+    if (!validateForm()) {
+      setSubmitError("表單格式有誤，請修正下方標記之欄位。");
+      return;
+    }
+
+    if (userRole === 'rider') {
+      setHasAgreedToTermsCheckbox(false); // Reset check state
+      setIsTermsModalOpen(true);
+    } else {
+      await executeSubmission();
+    }
+  };
+
+  const handleAgreeAndSubmit = async () => {
+    if (!hasAgreedToTermsCheckbox) return;
+    setIsTermsModalOpen(false);
+    await executeSubmission();
   };
 
   // Automatic form submission countdown and auto-reset/auto-close
@@ -208,6 +290,12 @@ export default function App() {
     }));
     setIsModalOpen(true);
   };
+
+  // Reset form errors when switching roles or opening/closing modals
+  useEffect(() => {
+    setFormErrors({});
+    setSubmitError(null);
+  }, [userRole, isModalOpen]);
 
   const faqs = [
     {
@@ -439,154 +527,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* RIDER SECTION - Calculator */}
-      <section id="rider-section" className="py-24 bg-[#FFFDF0] relative border-b-4 border-[#111111]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <span className="inline-block px-3 py-1 border-2 border-[#111111] bg-[#FFD600] text-[#111111] text-xs font-black uppercase tracking-widest">
-              我是外送騎士 ‧ 合作津貼方案
-            </span>
-            <h2 className="text-4xl sm:text-5xl font-black text-[#111111] uppercase tracking-tighter">
-              跑單同時賺外快，每月被動加薪超簡單!
-            </h2>
-            <p className="text-slate-700 mt-4 text-base font-medium">
-              我們不抽成，也不干涉您的接單。只需在原有的擋泥板安裝穿巷廣告，即可獲得穩定的每月現金津貼，為您的荷包大加分。
-            </p>
-          </div>
-
-          <div className="max-w-4xl mx-auto">
-            {/* Single High-Impact Showcase Card */}
-            <div className="bg-white border-4 border-[#111111] rounded-none p-8 sm:p-12 brutalist-shadow space-y-8">
-              
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b-4 border-dashed border-[#111111]">
-                <div className="space-y-2 text-center md:text-left">
-                  <span className="text-xs font-black text-[#111111] bg-[#FFD600] border-2 border-[#111111] px-3 py-1 uppercase tracking-wider inline-block">
-                    熱門合作版位
-                  </span>
-                  <h3 className="text-3xl font-black text-[#111111] flex items-center justify-center md:justify-start gap-2">
-                    <Bike className="w-8 h-8 text-[#111111]" />
-                    機車擋泥板廣告
-                  </h3>
-                  <p className="text-sm text-slate-500 font-bold">
-                    裝上本公司的擋泥板、廣告膠條貼於外送箱上方，每月達成目標準時入帳!
-                  </p>
-                </div>
-
-                <div className="bg-[#FFD600] border-4 border-[#111111] p-6 text-center shrink-0 w-full md:w-auto min-w-[280px] brutalist-shadow-sm">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#111111] opacity-80 block">COOPERATION ALLOWANCE</span>
-                  <div className="space-y-1 mt-2">
-                    <div className="flex items-center justify-between font-black text-base border-b-2 border-[#111111]/20 pb-1.5">
-                      <span>首月津貼：</span>
-                      <span className="text-xl font-mono text-[#111111] bg-white px-2 py-0.5 border border-[#111111]">NT$ 1,000 / 月</span>
-                    </div>
-                    <div className="flex items-center justify-between font-black text-base pt-1.5">
-                      <span>次月津貼：</span>
-                      <span className="text-xl font-mono text-[#111111] bg-white px-2 py-0.5 border border-[#111111]">NT$ 500 / 月</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bullet points and highlights */}
-              <div className="grid grid-cols-1 md:grid-cols-2 max-w-2xl mx-auto gap-6 text-sm">
-                <div className="space-y-2 bg-[#FFFDF0] border-2 border-[#111111] p-5 brutalist-shadow-sm">
-                  <div className="w-9 h-9 bg-[#111111] text-[#FFD600] flex items-center justify-center font-black rounded-none">
-                    <TrendingUp className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-black text-base text-[#111111]">100% 額外被動收入</h4>
-                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                    與您的外送接單不衝突，只需維持日常跑單習慣，安裝確實並達成每月目標，即享被動加薪津貼!
-                  </p>
-                </div>
-
-                <div className="space-y-2 bg-[#FFFDF0] border-2 border-[#111111] p-5 brutalist-shadow-sm">
-                  <div className="w-9 h-9 bg-[#111111] text-[#FFD600] flex items-center justify-center font-black rounded-none">
-                    <CheckCircle2 className="w-5 h-5" />
-                  </div>
-                  <h4 className="font-black text-base text-[#111111]">安全合法合規</h4>
-                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                    完全符合交通監理機關車體廣告標示法規。無反光、無遮蔽車牌問題，守法跑單免煩惱。
-                  </p>
-                </div>
-              </div>
-
-              {/* Community Supervision & Referral System */}
-              <div className="border-t-4 border-dashed border-[#111111] pt-8 space-y-6">
-                <div className="text-center">
-                  <span className="inline-block px-3 py-1 border-2 border-[#111111] bg-[#111111] text-[#FFD600] text-xs font-black uppercase tracking-widest brutalist-shadow-sm">
-                    加碼收益 ‧ 推薦與監督獎勵機制
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Card 1: 檢舉獎金機制 */}
-                  <div className="bg-white border-4 border-[#111111] p-6 brutalist-shadow-sm space-y-3 flex flex-col justify-between">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-red-500 text-[#111111] border-2 border-[#111111] flex items-center justify-center font-black rounded-none shrink-0">
-                          <AlertTriangle className="w-4 h-4 text-white" />
-                        </div>
-                        <h4 className="font-black text-base text-[#111111]">檢舉獎金機制</h4>
-                      </div>
-                      <p className="text-xs text-slate-700 font-bold leading-relaxed">
-                        為維護廣告執行品質，我們實施全民監督：
-                      </p>
-                      <ul className="text-xs text-slate-600 font-bold space-y-1.5 list-disc list-inside">
-                        <li>若發現外送箱帶有廣告膠條，卻無擋泥板者。</li>
-                        <li>若發現裝有廣告擋泥板，卻無外送箱廣告膠條者。</li>
-                      </ul>
-                      <p className="text-xs text-slate-700 font-bold leading-relaxed">
-                        以上兩種情形皆可拍照進行檢舉。
-                      </p>
-                    </div>
-                    <div className="bg-red-50 border-2 border-red-500 text-red-700 p-2 text-center font-black text-xs mt-4">
-                      ★ 每成功檢舉一人，即獲 NT$ 200 檢舉獎金！
-                    </div>
-                  </div>
-
-                  {/* Card 2: 邀請好友機制 */}
-                  <div className="bg-white border-4 border-[#111111] p-6 brutalist-shadow-sm space-y-3 flex flex-col justify-between">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-emerald-400 text-[#111111] border-2 border-[#111111] flex items-center justify-center font-black rounded-none shrink-0">
-                          <Users className="w-4 h-4 text-[#111111]" />
-                        </div>
-                        <h4 className="font-black text-base text-[#111111]">騎士推薦邀請機制</h4>
-                      </div>
-                      <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                        好康逗相報！推薦您的外送夥伴加入「穿巷騎士」行列。攜手讓廣告在城市大街小巷中擴散，一起賺取更豐厚的被動津貼收益！
-                      </p>
-                    </div>
-                    <div className="bg-emerald-50 border-2 border-emerald-500 text-emerald-700 p-2 text-center font-black text-xs mt-4">
-                      ★ 每成功邀請一名外送員加入，即享 NT$ 100 邀請獎金！
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="pt-4 text-center">
-                <button 
-                  onClick={() => openFormWithRole('rider')}
-                  className="px-8 py-4 w-full md:w-auto font-black text-lg uppercase tracking-wider text-[#FFD600] bg-[#111111] border-4 border-[#111111] hover:bg-white hover:text-[#111111] brutalist-shadow transition-all duration-200 text-center inline-flex items-center justify-center gap-2"
-                >
-                  <Bike className="w-5 h-5" />
-                  <span>立即線上報名 ‧ 搶先卡位</span>
-                </button>
-                <p className="text-[10px] text-slate-500 font-bold mt-3">
-                  * 實際合作將依車款、常跑行政區與首輪配對之廣告品牌額滿狀況而定。
-                </p>
-              </div>
-
-            </div>
-          </div>
-
-        </div>
-      </section>
-
       {/* CORE BENEFITS / BENTO GRID */}
-      <section id="benefits-section" className="py-24 bg-white border-b-4 border-[#111111]">
+      <section id="benefits-section" className="py-24 bg-[#FFFDF0] border-b-4 border-[#111111]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
@@ -660,6 +602,158 @@ export default function App() {
         </div>
       </section>
 
+      {/* RIDER SECTION - Calculator */}
+      <section id="rider-section" className="py-24 bg-white relative border-b-4 border-[#111111]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
+            <span className="inline-block px-3 py-1 border-2 border-[#111111] bg-[#FFD600] text-[#111111] text-xs font-black uppercase tracking-widest">
+              我是外送騎士 ‧ 合作津貼方案
+            </span>
+            <h2 className="text-4xl sm:text-5xl font-black text-[#111111] uppercase tracking-tighter">
+              跑單同時賺外快，每月被動加薪超簡單!
+            </h2>
+            <p className="text-slate-700 mt-4 text-base font-medium">
+              我們不抽成，也不干涉您的接單。只需在原有的擋泥板安裝穿巷廣告，即可獲得穩定的每月現金津貼，為您的荷包大加分。
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto">
+            {/* Single High-Impact Showcase Card */}
+            <div className="bg-[#FFFDF0] border-4 border-[#111111] rounded-none p-8 sm:p-12 brutalist-shadow space-y-8">
+              
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b-4 border-dashed border-[#111111]">
+                <div className="space-y-2 text-center md:text-left">
+                  <span className="text-xs font-black text-[#111111] bg-[#FFD600] border-2 border-[#111111] px-3 py-1 uppercase tracking-wider inline-block">
+                    熱門合作版位
+                  </span>
+                  <h3 className="text-3xl font-black text-[#111111] flex items-center justify-center md:justify-start gap-2">
+                    <Bike className="w-8 h-8 text-[#111111]" />
+                    機車擋泥板廣告
+                  </h3>
+                  <p className="text-sm text-slate-500 font-bold">
+                    裝上本公司的擋泥板、廣告膠條貼於外送箱上方，每月達成目標準時入帳!
+                  </p>
+                </div>
+
+                <div className="bg-[#FFD600] border-4 border-[#111111] p-6 text-center shrink-0 w-full md:w-auto min-w-[280px] brutalist-shadow-sm">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#111111] opacity-80 block">COOPERATION ALLOWANCE</span>
+                  <div className="space-y-1 mt-2">
+                    <div className="flex items-center justify-between font-black text-base border-b-2 border-[#111111]/20 pb-1.5">
+                      <span className="flex items-center gap-1.5">
+                        首月津貼
+                        <span className="text-[9px] bg-[#EF4444] text-white border border-[#111111] px-1 py-0.5 rounded-none font-black animate-pulse whitespace-nowrap">
+                          首月雙倍!
+                        </span>
+                        ：
+                      </span>
+                      <span className="text-xl font-mono text-[#111111] bg-white px-2 py-0.5 border border-[#111111]">NT$ 1,000 / 月</span>
+                    </div>
+                    <div className="flex items-center justify-between font-black text-base pt-1.5">
+                      <span>次月津貼：</span>
+                      <span className="text-xl font-mono text-[#111111] bg-white px-2 py-0.5 border border-[#111111]">NT$ 500 / 月</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bullet points and highlights */}
+              <div className="grid grid-cols-1 md:grid-cols-2 max-w-2xl mx-auto gap-6 text-sm">
+                <div className="space-y-2 bg-white border-2 border-[#111111] p-5 brutalist-shadow-sm">
+                  <div className="w-9 h-9 bg-[#111111] text-[#FFD600] flex items-center justify-center font-black rounded-none">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-black text-base text-[#111111]">100% 額外被動收入</h4>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    與您的外送接單不衝突，只需維持日常跑單習慣，安裝確實並達成每月目標，即享被動加薪津貼!
+                  </p>
+                </div>
+
+                <div className="space-y-2 bg-white border-2 border-[#111111] p-5 brutalist-shadow-sm">
+                  <div className="w-9 h-9 bg-[#111111] text-[#FFD600] flex items-center justify-center font-black rounded-none">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                  <h4 className="font-black text-base text-[#111111]">安全合法合規</h4>
+                  <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                    完全符合交通監理機關車體廣告標示法規。無反光、無遮蔽車牌問題，守法跑單免煩惱。
+                  </p>
+                </div>
+              </div>
+
+              {/* Community Supervision & Referral System */}
+              <div className="border-t-4 border-dashed border-[#111111] pt-8 space-y-6">
+                <div className="text-center">
+                  <span className="inline-block px-3 py-1 border-2 border-[#111111] bg-[#111111] text-[#FFD600] text-xs font-black uppercase tracking-widest brutalist-shadow-sm">
+                    加碼收益 ‧ 推薦與監督獎勵機制
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Card 1: 檢舉獎金機制 */}
+                  <div className="bg-[#FFFDF0] border-4 border-[#111111] p-6 brutalist-shadow-sm space-y-3 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-red-500 text-[#111111] border-2 border-[#111111] flex items-center justify-center font-black rounded-none shrink-0">
+                          <AlertTriangle className="w-4 h-4 text-white" />
+                        </div>
+                        <h4 className="font-black text-base text-[#111111]">檢舉獎金機制</h4>
+                      </div>
+                      <p className="text-xs text-slate-700 font-bold leading-relaxed">
+                        為維護廣告執行品質，我們實施全民監督：
+                      </p>
+                      <ul className="text-xs text-slate-600 font-bold space-y-1.5 list-disc list-inside">
+                        <li>若發現外送箱帶有廣告膠條，卻無擋泥板者。</li>
+                        <li>若發現裝有廣告擋泥板，卻無外送箱廣告膠條者。</li>
+                      </ul>
+                      <p className="text-xs text-slate-700 font-bold leading-relaxed">
+                        以上兩種情形皆可拍照進行檢舉。
+                      </p>
+                    </div>
+                    <div className="bg-red-50 border-2 border-red-500 text-red-700 p-2 text-center font-black text-xs mt-4">
+                      ★ 每成功檢舉一人，即獲 NT$ 200 檢舉獎金！
+                    </div>
+                  </div>
+
+                  {/* Card 2: 邀請好友機制 */}
+                  <div className="bg-[#FFFDF0] border-4 border-[#111111] p-6 brutalist-shadow-sm space-y-3 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-emerald-400 text-[#111111] border-2 border-[#111111] flex items-center justify-center font-black rounded-none shrink-0">
+                          <Users className="w-4 h-4 text-[#111111]" />
+                        </div>
+                        <h4 className="font-black text-base text-[#111111]">騎士推薦邀請機制</h4>
+                      </div>
+                      <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                        好康逗相報！推薦您的外送夥伴加入「穿巷騎士」行列。攜手讓廣告在城市大街小巷中擴散，一起賺取更豐厚的被動津貼收益！
+                      </p>
+                    </div>
+                    <div className="bg-emerald-50 border-2 border-emerald-500 text-emerald-700 p-2 text-center font-black text-xs mt-4">
+                      ★ 每成功邀請一名外送員加入，即享 NT$ 100 邀請獎金！
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-4 text-center">
+                <button 
+                  onClick={() => openFormWithRole('rider')}
+                  className="px-8 py-4 w-full md:w-auto font-black text-lg uppercase tracking-wider text-[#FFD600] bg-[#111111] border-4 border-[#111111] hover:bg-white hover:text-[#111111] brutalist-shadow transition-all duration-200 text-center inline-flex items-center justify-center gap-2"
+                >
+                  <Bike className="w-5 h-5" />
+                  <span>立即線上報名 ‧ 搶先卡位</span>
+                </button>
+                <p className="text-[10px] text-slate-500 font-bold mt-3">
+                  * 實際合作將依車款、常跑行政區與首輪配對之廣告品牌額滿狀況而定。
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
       {/* HOW IT WORKS / TIMELINE */}
       <section className="py-24 bg-[#FFFDF0] border-b-4 border-[#111111] relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -710,8 +804,8 @@ export default function App() {
                     03
                   </div>
                   <div>
-                    <h4 className="font-black text-[#111111] text-base">安裝擋泥板與膠條</h4>
-                    <p className="text-xs text-slate-600 font-medium mt-1">收到包裹後自行輕鬆安裝！簡單對位鎖固擋泥板，並將廣告膠條貼於外送箱上方。</p>
+                    <h4 className="font-black text-[#111111] text-base">安裝並回傳照片</h4>
+                    <p className="text-xs text-slate-600 font-medium mt-1">收到包裹後自行輕鬆安裝！安裝完成後請將「裝好之擋泥板與箱上膠條」拍照，傳至我們的官方 LINE 客服回傳審查，通過即可啟用津貼資格！</p>
                   </div>
                 </div>
 
@@ -720,8 +814,8 @@ export default function App() {
                     04
                   </div>
                   <div>
-                    <h4 className="font-black text-[#111111] text-base">安心上路，每月 10 號結算</h4>
-                    <p className="text-xs text-slate-600 font-medium mt-1">達成基本外送時數或單數即可領取！截圖您的外送平台數據送出核實，被動收入次月匯至指定帳戶。</p>
+                    <h4 className="font-black text-[#111111] text-base">安心上路與月結申報</h4>
+                    <p className="text-xs text-slate-600 font-medium mt-1">維持日常跑單。每月月底前，透過官方 LINE 傳送您的平台跑單里程/數據截圖進行核實，津貼於次月 10 號準時匯入指定帳戶！</p>
                   </div>
                 </div>
               </div>
@@ -1038,10 +1132,18 @@ export default function App() {
                         type="tel" 
                         required
                         value={formData.phone}
-                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                        onChange={(e) => {
+                          setFormData({...formData, phone: e.target.value});
+                          if (formErrors.phone) {
+                            setFormErrors(prev => ({ ...prev, phone: '' }));
+                          }
+                        }}
+                        className={`w-full px-4 py-3 border-2 rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111] ${formErrors.phone ? 'border-red-500 bg-red-50/50' : 'border-[#111111]'}`}
                         placeholder="例：0912345678"
                       />
+                      {formErrors.phone && (
+                        <p className="text-red-600 text-xs font-bold mt-1">⚠️ {formErrors.phone}</p>
+                      )}
                     </div>
                   </div>
 
@@ -1056,10 +1158,18 @@ export default function App() {
                         type="email" 
                         required
                         value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                        onChange={(e) => {
+                          setFormData({...formData, email: e.target.value});
+                          if (formErrors.email) {
+                            setFormErrors(prev => ({ ...prev, email: '' }));
+                          }
+                        }}
+                        className={`w-full px-4 py-3 border-2 rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111] ${formErrors.email ? 'border-red-500 bg-red-50/50' : 'border-[#111111]'}`}
                         placeholder="例：yourname@gmail.com"
                       />
+                      {formErrors.email && (
+                        <p className="text-red-600 text-xs font-bold mt-1">⚠️ {formErrors.email}</p>
+                      )}
                     </div>
 
                     {/* Common Field: LINE ID */}
@@ -1187,10 +1297,20 @@ export default function App() {
                           type="text" 
                           required
                           value={formData.bankAccount}
-                          onChange={(e) => setFormData({...formData, bankAccount: e.target.value})}
-                          className="w-full px-4 py-3 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
-                          placeholder="例：中國信託 (822) 123456789012"
+                          onChange={(e) => {
+                            setFormData({...formData, bankAccount: e.target.value});
+                            if (formErrors.bankAccount) {
+                              setFormErrors(prev => ({ ...prev, bankAccount: '' }));
+                            }
+                          }}
+                          className={`w-full px-4 py-3 border-2 rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111] ${formErrors.bankAccount ? 'border-red-500 bg-red-50/50' : 'border-[#111111]'}`}
+                          placeholder="例：822 123456789012"
                         />
+                        {formErrors.bankAccount ? (
+                          <p className="text-red-600 text-xs font-bold mt-1">⚠️ {formErrors.bankAccount}</p>
+                        ) : (
+                          <p className="text-[11px] text-slate-500 font-bold mt-0.5">※ 格式需包含 3 位銀行代碼加上空格或 -，再輸入帳號。例如：822 123456789012</p>
+                        )}
                       </div>
 
                       {/* Scooter license plate */}
@@ -1571,10 +1691,18 @@ export default function App() {
                           type="tel" 
                           required
                           value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                          className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                          onChange={(e) => {
+                            setFormData({...formData, phone: e.target.value});
+                            if (formErrors.phone) {
+                              setFormErrors(prev => ({ ...prev, phone: '' }));
+                            }
+                          }}
+                          className={`w-full px-3 py-2.5 border-2 rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111] ${formErrors.phone ? 'border-red-500 bg-red-50/50' : 'border-[#111111]'}`}
                           placeholder="例：0912345678"
                         />
+                        {formErrors.phone && (
+                          <p className="text-red-600 text-xs font-bold mt-1">⚠️ {formErrors.phone}</p>
+                        )}
                       </div>
                     </div>
 
@@ -1585,10 +1713,18 @@ export default function App() {
                           type="email" 
                           required
                           value={formData.email}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
-                          className="w-full px-3 py-2.5 border-2 border-[#111111] text-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold"
+                          onChange={(e) => {
+                            setFormData({...formData, email: e.target.value});
+                            if (formErrors.email) {
+                              setFormErrors(prev => ({ ...prev, email: '' }));
+                            }
+                          }}
+                          className={`w-full px-3 py-2.5 border-2 rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111] ${formErrors.email ? 'border-red-500 bg-red-50/50' : 'border-[#111111]'}`}
                           placeholder="例：example@mail.com"
                         />
+                        {formErrors.email && (
+                          <p className="text-red-600 text-xs font-bold mt-1">⚠️ {formErrors.email}</p>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <label className="text-xs font-black text-[#111111] block uppercase">LINE ID *</label>
@@ -1693,26 +1829,32 @@ export default function App() {
                         <div className="space-y-1">
                           <label className="text-xs font-black text-[#111111] block uppercase">平均每週跑單天數與每天時數 *</label>
                           <div className="grid grid-cols-2 gap-2">
-                            <input 
-                              type="number" 
-                              required
-                              min="1"
-                              max="7"
-                              value={formData.weeklyDays}
-                              onChange={(e) => setFormData({...formData, weeklyDays: e.target.value})}
-                              className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
-                              placeholder="天數 (1-7)"
-                            />
-                            <input 
-                              type="number" 
-                              required
-                              min="1"
-                              max="24"
-                              value={formData.dailyHours}
-                              onChange={(e) => setFormData({...formData, dailyHours: e.target.value})}
-                              className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
-                              placeholder="時數 (1-24)"
-                            />
+                            <div className="space-y-1">
+                              <input 
+                                type="number" 
+                                required
+                                min="1"
+                                max="7"
+                                value={formData.weeklyDays}
+                                onChange={(e) => setFormData({...formData, weeklyDays: e.target.value})}
+                                className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                                placeholder="天數 (1-7)"
+                              />
+                              <p className="text-[11px] font-black text-[#111111] uppercase tracking-wider pl-1">天 (天數)</p>
+                            </div>
+                            <div className="space-y-1">
+                              <input 
+                                type="number" 
+                                required
+                                min="1"
+                                max="24"
+                                value={formData.dailyHours}
+                                onChange={(e) => setFormData({...formData, dailyHours: e.target.value})}
+                                className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
+                                placeholder="時數 (1-24)"
+                              />
+                              <p className="text-[11px] font-black text-[#111111] uppercase tracking-wider pl-1">小時 (時數)</p>
+                            </div>
                           </div>
                         </div>
 
@@ -1729,17 +1871,27 @@ export default function App() {
                           />
                         </div>
 
-                        {/* Bank Account for allowance */}
+                         {/* Bank Account for allowance */}
                         <div className="col-span-1 sm:col-span-2 space-y-1">
                           <label className="text-xs font-black text-[#111111] block uppercase">銀行帳號 * (匯款廣告津貼用)</label>
                           <input 
                             type="text" 
                             required
                             value={formData.bankAccount}
-                            onChange={(e) => setFormData({...formData, bankAccount: e.target.value})}
-                            className="w-full px-3 py-2.5 border-2 border-[#111111] rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111]"
-                            placeholder="例：中國信託 (822) 123456789012"
+                            onChange={(e) => {
+                              setFormData({...formData, bankAccount: e.target.value});
+                              if (formErrors.bankAccount) {
+                                setFormErrors(prev => ({ ...prev, bankAccount: '' }));
+                              }
+                            }}
+                            className={`w-full px-3 py-2.5 border-2 rounded-none focus:outline-none focus:bg-[#FFFDF0] focus:ring-0 text-sm font-bold text-[#111111] ${formErrors.bankAccount ? 'border-red-500 bg-red-50/50' : 'border-[#111111]'}`}
+                            placeholder="例：822 123456789012"
                           />
+                          {formErrors.bankAccount ? (
+                            <p className="text-red-600 text-xs font-bold mt-1">⚠️ {formErrors.bankAccount}</p>
+                          ) : (
+                            <p className="text-[11px] text-slate-500 font-bold mt-0.5">※ 格式需包含 3 位銀行代碼加上空格或 -，再輸入帳號。例如：822 123456789012</p>
+                          )}
                         </div>
 
                         {/* Scooter license plate */}
@@ -2101,6 +2253,208 @@ export default function App() {
                 >
                   確認並關閉
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* TERMS AND CONDITIONS AGREEMENT MODAL */}
+      <AnimatePresence>
+        {isTermsModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTermsModalOpen(false)}
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            />
+            
+            {/* Modal Box */}
+            <motion.div 
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              className="bg-white rounded-none w-full max-w-2xl overflow-hidden relative z-10 border-4 border-[#111111] brutalist-shadow flex flex-col max-h-[90vh]"
+            >
+              {/* Header */}
+              <div className="bg-[#111111] text-white p-5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <ShieldCheck className="w-6 h-6 text-[#FFD600]" />
+                  <span className="font-black tracking-wide text-sm sm:text-base uppercase text-[#FFD600]">穿巷廣告騎士 ─ 合作守則與條款同意書</span>
+                </div>
+                <button 
+                  onClick={() => setIsTermsModalOpen(false)}
+                  className="p-1.5 border border-white/20 bg-white/10 text-white hover:bg-[#FFD600] hover:text-[#111111] hover:border-[#111111] rounded-none transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-5 sm:p-8 overflow-y-auto text-[#111111] text-xs sm:text-sm leading-relaxed space-y-6 flex-1 bg-[#FFFDF0]/30 font-bold">
+                <div className="bg-[#FFD600]/10 border-2 border-[#111111] p-4 rounded-none text-[#111111] text-xs space-y-1.5">
+                  <p className="font-black text-xs sm:text-sm">親愛的騎士夥伴您好：</p>
+                  <p>為了確保平台與廣告主的權益，並建立長久互信的合作關係，在您遞交申請前，請詳閱並勾選同意以下騎士合作條款。本條款自您回傳相片審核通過起正式生效。</p>
+                </div>
+
+                <div className="space-y-4">
+                  {/* 第一條 */}
+                  <div className="space-y-1.5 border-l-4 border-red-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base flex items-center gap-2">
+                      <span className="text-red-500">第一條</span> 嚴禁私自拆卸與影像造假（違規處罰）
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      騎士於合作合約期間內，<span className="text-red-600 underline">不得私自拆卸、遮蔽「穿巷廣告擋泥板」或撕毀「外送箱廣告膠條」</span>。
+                      本平台<span className="text-red-600 underline">嚴禁使用 AI 繪圖、修圖、影像合成、冒用他人照片</span>等手段偽造安裝完工照或每月跑單數據截圖。
+                      一經系統或人工查核證實，將立即終止所有合作資格、列入業界聯合黑名單，且本平台有權追回歷來已發放之所有廣告津貼，並保留相關法律追訴權。
+                    </p>
+                  </div>
+
+                  {/* 第二條 */}
+                  <div className="space-y-1.5 border-l-4 border-[#FF5A00] pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-[#FF5A00]">第二條</span> 收到擋泥板與膠條後需於「3 天內」完成安裝
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      當您收到本公司寄送之擋泥板與膠條包裹後，<span className="text-slate-900 underline">必須於 3 日內（以簽收/超商取貨當日起算）</span>完成安裝，
+                      並確實將「安裝好之擋泥板與箱上膠條」拍照清晰上傳至穿巷官方 LINE 客服審核，逾期未回傳將取消當次活動資格。
+                    </p>
+                  </div>
+
+                  {/* 第三條 */}
+                  <div className="space-y-1.5 border-l-4 border-indigo-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-indigo-500">第三條</span> 廣告效期起算日說明
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      假設本合作廣告效期為 <span className="text-indigo-600">180 天</span>，<span className="text-slate-900 underline">廣告效期並非從收到包裹日算起，而是以「騎士將完工照拍照回傳至官方 LINE、且穿巷客服審核通過當日」</span>為正式起算日（第一天）。
+                      例如：於 7/16 審核通過，廣告效期即從 7/16 起算 180 天至結束。
+                    </p>
+                  </div>
+
+                  {/* 第四條 */}
+                  <div className="space-y-1.5 border-l-4 border-emerald-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-emerald-500">第四條</span> 廣告自動接續與寄送機制
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      為確保您的穩定津貼不中斷，在當期 180 天廣告效期結束前（約倒數 7-10 天），穿巷平台會<span className="text-emerald-600 underline">自動安排下一波全新擋泥板（或新廣告）寄送至您的通訊地址</span>。
+                      騎士收到後同樣需於 3 天內更換並拍照回傳，即可輕鬆無縫接軌、持續累積津貼收益。
+                    </p>
+                  </div>
+
+                  {/* 第五條 */}
+                  <div className="space-y-1.5 border-l-4 border-amber-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-amber-500">第五條</span> 廣告擋泥板與膠條維護與清潔義務
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      為保障廣告主之合法曝光權益，騎士有義務妥善維持廣告擋泥板、上蓋膠條之整潔。若日常騎乘有泥沙或髒污，請適度擦拭。
+                      廣告物體<span className="text-amber-600 underline">不得有故意塗鴉、遮蔽、損毀或刻意擋住機車車牌</span>之行為，以免違反交通法規。
+                    </p>
+                  </div>
+
+                  {/* 第六條 */}
+                  <div className="space-y-1.5 border-l-4 border-blue-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-blue-500">第六條</span> 跑單數據真實性承諾
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      騎士每月月底申報津貼時所提供之跑單天數、每天時數、跑單里程 or 單數等截圖，<span className="text-blue-600 underline">必須為外送平台（如 Foodpanda 或 Uber Eats）官方 App 系統內之真實紀錄</span>。
+                      嚴禁任何偽造、修改、重複申報 or 冒用他人數據之行為，不實者當月廣告津貼全額扣發。
+                    </p>
+                  </div>
+
+                  {/* 第七條 */}
+                  <div className="space-y-1.5 border-l-4 border-purple-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-purple-500">第七條</span> 非人為損壞與免費補發保障
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      若於合作期間，因非人為因素（如他車追撞、意外事故、天然災害、遭他人惡意破壞）導致廣告板或上蓋膠條損壞，
+                      騎士應於 <span className="text-purple-600">24 小時內</span>拍照通知官方 LINE 客服，<span className="text-slate-900 underline">本平台將免費寄送補發全新擋泥板與膠條</span>，這不影響您的誠信評級。
+                    </p>
+                  </div>
+
+                  {/* 第八條 */}
+                  <div className="space-y-1.5 border-l-4 border-slate-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-slate-500">第八條</span> 平台調整權與法律責任
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      穿巷平台保留因廣告主申報力任何天災等不可抗抗成分修改津貼補助細則、提前終止特定廣告或變更條款本之權利。如有異動，平台將於15天前公告通知。若有藥品領取本公司產品、不同機車申請一起履行跑單、侵占擋泥板或誹謗意災者，平台除刻取消資格外，即可追究法律賠償。
+                    </p>
+                  </div>
+
+                  {/* 第九條 */}
+                  <div className="space-y-1.5 border-l-4 border-teal-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-teal-500">第九條</span> 隱私權條款與個人資料蒐集、處理及利用同意書
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      本平台依中華民國個人資料保護法規定，蒐集、處理及利用您於本平台註冊、申請或跑單所提供之個人資料（包括姓名、聯絡電話、通訊地址、身分證明文件、車牌號碼、匯款金融帳號、LINE 帳號、外送平台單量及里程截圖等）。
+                      前述個人資料僅限用於<span className="text-teal-600 underline">身份核對、廣告物料郵寄、跑單真實性審核、津貼計算與撥款發放、行銷數據去識別化統計分析</span>等合約履行目的。
+                      本平台將採取完善之資訊安全防護措施保護您的資料，非經您明示同意或法令另有規定，絕不將您的個人資料提供給無關之第三方或作其他非特定目的之用途。
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Agreement Checkbox Area */}
+              <div className="bg-[#FFFDF0] p-4 sm:p-5 border-t-4 border-[#111111] shrink-0 space-y-4">
+                <label className={`flex items-start gap-3 select-none ${termsReadCountdown > 0 ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                  <input 
+                    type="checkbox"
+                    checked={hasAgreedToTermsCheckbox}
+                    disabled={termsReadCountdown > 0}
+                    onChange={(e) => setHasAgreedToTermsCheckbox(e.target.checked)}
+                    className="mt-1 w-5 h-5 border-2 border-[#111111] text-[#FFD600] rounded-none focus:ring-0 focus:ring-offset-0 cursor-pointer accent-[#FFD600] disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className="text-xs sm:text-sm font-black text-[#111111] leading-tight flex flex-col gap-1">
+                    <span>我已詳細閱讀、充分理解並自願同意上述所有「穿巷騎士合作守則與條款同意書」、「隱私權條款」及「個資蒐集同意書」，承諾誠實守法。</span>
+                    {termsReadCountdown > 0 && (
+                      <span className="text-red-600 font-bold text-xs flex items-center gap-1.5 animate-pulse mt-1">
+                        ⚠️ 請閱讀條款並等待 {termsReadCountdown} 秒後方可點選同意
+                      </span>
+                    )}
+                  </span>
+                </label>
+
+                {/* Buttons */}
+                <div className="flex gap-3 text-xs sm:text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsModalOpen(false)}
+                    className="flex-1 py-3 border-2 border-[#111111] bg-white text-[#111111] font-black hover:bg-slate-50 transition-all text-center rounded-none cursor-pointer"
+                  >
+                    拒絕並返回
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!hasAgreedToTermsCheckbox || isSubmitting || termsReadCountdown > 0}
+                    onClick={handleAgreeAndSubmit}
+                    className={`flex-[2] py-3 border-2 border-[#111111] text-[#111111] font-black rounded-none transition-all text-center flex items-center justify-center gap-2 cursor-pointer ${
+                      (!hasAgreedToTermsCheckbox || isSubmitting || termsReadCountdown > 0) 
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed border-slate-300' 
+                        : 'bg-[#FFD600] hover:bg-[#FFE34D] brutalist-shadow-sm'
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-t-2 border-b-2 border-[#111111] rounded-full animate-spin" />
+                        <span>正式遞交中...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>同意條款並正式送出</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
