@@ -47,6 +47,8 @@ export async function saveSubmission(submissionData: any) {
     scooter_model: cleanedData.scooterModel || '',
     deliveryPlatform: platformText,
     delivery_platform: platformText,
+    workType: cleanedData.workType || 'part-time',
+    work_type: cleanedData.workType || 'part-time',
     licensePlate: cleanedData.licensePlate || '',
     license_plate: cleanedData.licensePlate || '',
     dailyHours: cleanedData.dailyHours || '',

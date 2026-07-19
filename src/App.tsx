@@ -66,6 +66,7 @@ export default function App() {
     city: '',
     scooterModel: '',
     deliveryPlatform: 'both',
+    workType: 'part-time',
     companyName: '',
     budget: 'under-5w',
     message: '',
@@ -253,6 +254,7 @@ export default function App() {
               city: '',
               scooterModel: '',
               deliveryPlatform: 'both',
+              workType: 'part-time',
               companyName: '',
               budget: 'under-5w',
               message: '',
@@ -299,10 +301,6 @@ export default function App() {
 
   const faqs = [
     {
-      q: '機車擋泥板和外送箱貼紙安裝會傷到我的車子嗎？',
-      a: '完全不會！我們採用專利高質感不留膠車貼與免鑽孔擋泥板支架。由穿巷專業技師團隊為您安裝與拆除，保證不傷烤漆、不留殘膠、不破壞車身結構。'
-    },
-    {
       q: '廣告費是每個月固定發放嗎？要如何結算？',
       a: '是的！只要您每月達到最低上線要求，我們將透過專屬平台進行結算。每月 10 號將上月被動收入匯入您的指定帳戶。'
     },
@@ -313,10 +311,6 @@ export default function App() {
     {
       q: '廣告主可以如何追蹤廣告曝光效果？',
       a: '穿巷提供完整的「實時里程數據追蹤」與「地區熱點地圖分析」！每位簽約騎士均有 GPS 定位系統，並於每月結算時提供完整的曝光時數、跑跑區域分析與多角度車體照片驗收，讓您每一分預算都清晰可見。'
-    },
-    {
-      q: '如果遇到下雨或車子維修，收益會受影響嗎？',
-      a: '只要每個月累積的配送里程與上線天數達標，就不會受到單日氣候或短期維修影響。我們設計了極具彈性的分級收益機制，即使跑得少也有對應的基礎被動獎金。'
     }
   ];
 
@@ -1231,6 +1225,46 @@ export default function App() {
                         </select>
                       </div>
 
+                      {/* Work Type Check/Radio Selector */}
+                      <div className="col-span-1 sm:col-span-2 space-y-2">
+                        <label className="text-xs font-black text-[#111111] flex items-center gap-1.5 uppercase">
+                          <Briefcase className="w-4 h-4 text-[#111111]" />
+                          <span>外送身分分類 * <span className="text-slate-500 font-medium normal-case">(勾選正職 / 兼職)</span></span>
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <label className={`flex items-center gap-3 p-3.5 border-2 text-sm font-black cursor-pointer select-none transition-all ${
+                            formData.workType === 'full-time' 
+                              ? 'bg-[#FFD600] border-[#111111] shadow-[2px_2px_0px_0px_rgba(17,17,17,1)] text-[#111111]' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-[#111111]'
+                          }`}>
+                            <input 
+                              type="radio"
+                              name="workTypeMain"
+                              value="full-time"
+                              checked={formData.workType === 'full-time'}
+                              onChange={() => setFormData({...formData, workType: 'full-time'})}
+                              className="accent-[#111111] h-4 w-4 border-2 border-[#111111] shrink-0"
+                            />
+                            <span>正職外送員 (主業經營)</span>
+                          </label>
+                          <label className={`flex items-center gap-3 p-3.5 border-2 text-sm font-black cursor-pointer select-none transition-all ${
+                            formData.workType === 'part-time' 
+                              ? 'bg-[#FFD600] border-[#111111] shadow-[2px_2px_0px_0px_rgba(17,17,17,1)] text-[#111111]' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-[#111111]'
+                          }`}>
+                            <input 
+                              type="radio"
+                              name="workTypeMain"
+                              value="part-time"
+                              checked={formData.workType === 'part-time'}
+                              onChange={() => setFormData({...formData, workType: 'part-time'})}
+                              className="accent-[#111111] h-4 w-4 border-2 border-[#111111] shrink-0"
+                            />
+                            <span>兼職外送員 (副業兼差)</span>
+                          </label>
+                        </div>
+                      </div>
+
                       {/* Dynamic District Multi-Selector */}
                       {formData.city && CITY_DISTRICTS[formData.city] && (
                         <div className="col-span-1 sm:col-span-2 space-y-2 border-2 border-[#111111] bg-white p-4">
@@ -1634,6 +1668,7 @@ export default function App() {
                           city: '',
                           scooterModel: '',
                           deliveryPlatform: 'both',
+                          workType: 'part-time',
                           companyName: '',
                           budget: 'under-5w',
                           message: '',
@@ -1772,6 +1807,45 @@ export default function App() {
                             <option value="foodomo">foodomo 外送</option>
                             <option value="lalamove">Lalamove / 快遞 / 其他</option>
                           </select>
+                        </div>
+
+                        {/* Work Type Check/Radio Selector inside Modal */}
+                        <div className="col-span-1 sm:col-span-2 space-y-1">
+                          <label className="text-xs font-black text-[#111111] block uppercase">
+                            外送身分分類 * <span className="text-slate-500 font-medium normal-case">(勾選正職 / 兼職)</span>
+                          </label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label className={`flex items-center gap-2 p-3 border-2 text-xs font-black cursor-pointer select-none transition-all ${
+                              formData.workType === 'full-time' 
+                                ? 'bg-[#FFD600] border-[#111111] shadow-[1px_1px_0px_0px_rgba(17,17,17,1)] text-[#111111]' 
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-[#111111]'
+                            }`}>
+                              <input 
+                                type="radio"
+                                name="workTypeModal"
+                                value="full-time"
+                                checked={formData.workType === 'full-time'}
+                                onChange={() => setFormData({...formData, workType: 'full-time'})}
+                                className="accent-[#111111] h-3.5 w-3.5 border-2 border-[#111111] shrink-0"
+                              />
+                              <span>正職外送員 (主業經營)</span>
+                            </label>
+                            <label className={`flex items-center gap-2 p-3 border-2 text-xs font-black cursor-pointer select-none transition-all ${
+                              formData.workType === 'part-time' 
+                                ? 'bg-[#FFD600] border-[#111111] shadow-[1px_1px_0px_0px_rgba(17,17,17,1)] text-[#111111]' 
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-[#111111]'
+                            }`}>
+                              <input 
+                                type="radio"
+                                name="workTypeModal"
+                                value="part-time"
+                                checked={formData.workType === 'part-time'}
+                                onChange={() => setFormData({...formData, workType: 'part-time'})}
+                                className="accent-[#111111] h-3.5 w-3.5 border-2 border-[#111111] shrink-0"
+                              />
+                              <span>兼職外送員 (副業兼差)</span>
+                            </label>
+                          </div>
                         </div>
 
                         {/* Dynamic District Multi-Selector */}
@@ -2176,6 +2250,7 @@ export default function App() {
                       <ul className="list-disc pl-6 space-y-1.5">
                         <li>廣告活動獎勵金將依照每次專案簽訂之里程數、活動天數、曝光比率等指標進行核算。</li>
                         <li>騎士須提供本人之有效台灣銀行帳戶，本公司將依核對無誤之時程進行匯款撥付，並依法進行所得核銷申報。</li>
+                        <li><strong className="text-red-600">未達任務標準扣發說明：</strong>若騎士於月度結算時未達成該合作專案規範之最低月度考核任務指標（如基本里程、上線天數等），當月廣告津貼與相關獎勵金將予以全額扣發，不提供等比例折算，亦不予遞延或累積。</li>
                       </ul>
                     </div>
 
@@ -2380,22 +2455,32 @@ export default function App() {
                   </div>
 
                   {/* 第八條 */}
-                  <div className="space-y-1.5 border-l-4 border-slate-500 pl-3">
+                  <div className="space-y-1.5 border-l-4 border-indigo-500 pl-3">
                     <h4 className="font-black text-[#111111] text-sm sm:text-base">
-                      <span className="text-slate-500">第八條</span> 平台調整權與法律責任
+                      <span className="text-indigo-500">第八條</span> 月度任務指標與津貼核發規範
                     </h4>
                     <p className="text-xs text-slate-700 leading-relaxed font-bold">
-                      穿巷平台保留因廣告主申報力任何天災等不可抗抗成分修改津貼補助細則、提前終止特定廣告或變更條款本之權利。如有異動，平台將於15天前公告通知。若有藥品領取本公司產品、不同機車申請一起履行跑單、侵占擋泥板或誹謗意災者，平台除刻取消資格外，即可追究法律賠償。
+                      合作騎士須遵循各廣告活動專案所制定之月度最低上線天數、跑單里程或配送件數等任務指標。凡月度結算時<span className="text-red-600 underline">未達基本任務指標者，當月之廣告合作津貼與相關獎金將全額不予核發</span>，且不提供等比例折算或遞延至次月。騎士特此承諾並充分理解此考核機制，同意以此作為廣告津貼結算發放之依據。
                     </p>
                   </div>
 
                   {/* 第九條 */}
-                  <div className="space-y-1.5 border-l-4 border-teal-500 pl-3">
+                  <div className="space-y-1.5 border-l-4 border-slate-500 pl-3">
                     <h4 className="font-black text-[#111111] text-sm sm:text-base">
-                      <span className="text-teal-500">第九條</span> 隱私權條款與個人資料蒐集、處理及利用同意書
+                      <span className="text-slate-500">第九條</span> 平台調整權與法律責任
                     </h4>
                     <p className="text-xs text-slate-700 leading-relaxed font-bold">
-                      本平台依中華民國個人資料保護法規定，蒐集、處理及利用您於本平台註冊、申請或跑單所提供之個人資料（包括姓名、聯絡電話、通訊地址、身分證明文件、車牌號碼、匯款金融帳號、LINE 帳號、外送平台單量及里程截圖等）。
+                      穿巷平台保留因廣告主申報力任何天災等不可抗抗成分修改津貼補助細則、提前終止特定廣告或變更條款本之權利。如有異動，平台將於15天前公告通知。若有違規情形，平台擁有取消合作資格及沒收廣告津貼外，即可追究法律賠償。
+                    </p>
+                  </div>
+
+                  {/* 第十條 */}
+                  <div className="space-y-1.5 border-l-4 border-teal-500 pl-3">
+                    <h4 className="font-black text-[#111111] text-sm sm:text-base">
+                      <span className="text-teal-500">第十條</span> 隱私權條款與個人資料蒐集、處理及利用同意書
+                    </h4>
+                    <p className="text-xs text-slate-700 leading-relaxed font-bold">
+                      本平台依中華民國個人資料保護法規定，蒐集、處理及利用您於本平台註冊、申請 or 跑單所提供之個人資料（包括姓名、聯絡電話、通訊地址、身分證明文件、車牌號碼、匯款金融帳號、LINE 帳號、外送平台單量及里程截圖等）。
                       前述個人資料僅限用於<span className="text-teal-600 underline">身份核對、廣告物料郵寄、跑單真實性審核、津貼計算與撥款發放、行銷數據去識別化統計分析</span>等合約履行目的。
                       本平台將採取完善之資訊安全防護措施保護您的資料，非經您明示同意或法令另有規定，絕不將您的個人資料提供給無關之第三方或作其他非特定目的之用途。
                     </p>
